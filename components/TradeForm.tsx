@@ -12,6 +12,8 @@ interface TradeFormProps {
 
 const SYMBOLS = ['XAUUSD', 'NQ', 'BTC', 'EURUSD', 'GBPUSD', 'ES', 'CL', 'ETH', 'USDJPY', 'AUDUSD']
 
+const DRAFT_KEY = 'tcj_trade_draft'
+
 const defaultForm = {
   date: new Date().toISOString().slice(0, 10),
   time: new Date().toTimeString().slice(0, 5),
@@ -70,6 +72,28 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
   const [showSymbolDropdown, setShowSymbolDropdown] = useState(false)
   const [previewImg, setPreviewImg] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Load draft on mount (only for new trades, not editing)
+  useEffect(() => {
+    if (!editingTrade) {
+      try {
+        const saved = localStorage.getItem(DRAFT_KEY)
+        if (saved) {
+          const draft = JSON.parse(saved)
+          setForm(draft)
+          setSymbolSearch(draft.symbol || '')
+          if (draft.screenshot) setPreviewImg(draft.screenshot)
+        }
+      } catch {}
+    }
+  }, [])
+
+  // Auto-save draft as user types (only for new trades)
+  useEffect(() => {
+    if (!editingTrade) {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(form))
+    }
+  }, [form, editingTrade])
 
   useEffect(() => {
     if (editingTrade) {
@@ -148,6 +172,7 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
     })
 
     if (!editingTrade) {
+      localStorage.removeItem(DRAFT_KEY)
       setForm({ ...defaultForm, date: form.date })
       setSymbolSearch('')
       setPreviewImg('')
