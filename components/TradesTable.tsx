@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { Trade } from '@/lib/types'
+import { useLanguage } from '@/components/LanguageContext'
 import { Search, Edit2, Trash2, Image, ChevronUp, ChevronDown, X } from 'lucide-react'
 
 interface TradesTableProps {
@@ -24,6 +25,9 @@ function formatDate(dateStr: string): string {
 }
 
 export default function TradesTable({ trades, onEdit, onDelete }: TradesTableProps) {
+  const { t } = useLanguage()
+  const tb = t.table
+
   const [search, setSearch] = useState('')
   const [dateFilter, setDateFilter] = useState<DateFilter>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -42,28 +46,28 @@ export default function TradesTable({ trades, onEdit, onDelete }: TradesTablePro
   })()
   const monthStart = new Date().toISOString().slice(0, 7)
 
-  const symbols = useMemo(() => [...new Set(trades.map(t => t.symbol))].sort(), [trades])
+  const symbols = useMemo(() => [...new Set(trades.map(tr => tr.symbol))].sort(), [trades])
 
   const filtered = useMemo(() => {
     let result = [...trades]
 
     if (search) {
       const q = search.toLowerCase()
-      result = result.filter(t =>
-        t.symbol.toLowerCase().includes(q) ||
-        t.entryReason.toLowerCase().includes(q) ||
-        t.notes.toLowerCase().includes(q) ||
-        t.date.includes(q)
+      result = result.filter(tr =>
+        tr.symbol.toLowerCase().includes(q) ||
+        tr.entryReason.toLowerCase().includes(q) ||
+        tr.notes.toLowerCase().includes(q) ||
+        tr.date.includes(q)
       )
     }
 
-    if (dateFilter === 'today') result = result.filter(t => t.date === today)
-    else if (dateFilter === 'week') result = result.filter(t => t.date >= weekStart)
-    else if (dateFilter === 'month') result = result.filter(t => t.date.startsWith(monthStart))
+    if (dateFilter === 'today') result = result.filter(tr => tr.date === today)
+    else if (dateFilter === 'week') result = result.filter(tr => tr.date >= weekStart)
+    else if (dateFilter === 'month') result = result.filter(tr => tr.date.startsWith(monthStart))
 
-    if (statusFilter !== 'all') result = result.filter(t => t.status === statusFilter)
-    if (typeFilter !== 'all') result = result.filter(t => t.type === typeFilter)
-    if (symbolFilter !== 'all') result = result.filter(t => t.symbol === symbolFilter)
+    if (statusFilter !== 'all') result = result.filter(tr => tr.status === statusFilter)
+    if (typeFilter !== 'all') result = result.filter(tr => tr.type === typeFilter)
+    if (symbolFilter !== 'all') result = result.filter(tr => tr.symbol === symbolFilter)
 
     result.sort((a, b) => {
       let av: string | number = a[sortField as keyof Trade] as string | number
@@ -92,9 +96,9 @@ export default function TradesTable({ trades, onEdit, onDelete }: TradesTablePro
       : <ChevronDown size={12} className="text-amber-400" />
   }
 
-  const rowColor = (t: Trade) => {
-    if (t.status === 'Win') return 'hover:bg-emerald-400/5'
-    if (t.status === 'Loss') return 'hover:bg-red-400/5'
+  const rowColor = (tr: Trade) => {
+    if (tr.status === 'Win') return 'hover:bg-emerald-400/5'
+    if (tr.status === 'Loss') return 'hover:bg-red-400/5'
     return 'hover:bg-zinc-400/5'
   }
 
@@ -108,18 +112,31 @@ export default function TradesTable({ trades, onEdit, onDelete }: TradesTablePro
 
   const selectClass = 'bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-3 py-2 text-zinc-300 text-xs focus:outline-none focus:border-amber-400/50 cursor-pointer'
 
-  const totalPnL = filtered.reduce((s, t) => s + t.pnl, 0)
-  const wins = filtered.filter(t => t.status === 'Win').length
-  const losses = filtered.filter(t => t.status === 'Loss').length
+  const totalPnL = filtered.reduce((s, tr) => s + tr.pnl, 0)
+  const wins = filtered.filter(tr => tr.status === 'Win').length
+  const losses = filtered.filter(tr => tr.status === 'Loss').length
+
+  const cols = [
+    { label: tb.colDate, field: 'date' as SortField },
+    { label: tb.colSymbol, field: 'symbol' as SortField },
+    { label: tb.colType, field: null },
+    { label: tb.colPnL, field: 'pnl' as SortField },
+    { label: tb.colRisk, field: 'risk' as SortField },
+    { label: tb.colPlannedRR, field: null },
+    { label: tb.colActualRR, field: 'actualRR' as SortField },
+    { label: tb.colStatus, field: 'status' as SortField },
+    { label: tb.colRules, field: null },
+    { label: tb.colActions, field: null },
+  ]
 
   return (
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-white text-2xl font-bold">Trade Log</h1>
+          <h1 className="text-white text-2xl font-bold">{tb.title}</h1>
           <p className="text-zinc-500 text-sm mt-0.5">
-            {filtered.length} of {trades.length} trades
+            {tb.tradesOf(filtered.length, trades.length)}
             {filtered.length > 0 && (
               <span className={`ml-2 font-medium ${totalPnL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                 · {totalPnL >= 0 ? '+' : ''}{fmt(totalPnL)}
@@ -137,12 +154,11 @@ export default function TradesTable({ trades, onEdit, onDelete }: TradesTablePro
       {/* Filters */}
       <div className="bg-[#111111] border border-[#1e1e1e] rounded-xl p-4">
         <div className="flex flex-wrap gap-3">
-          {/* Search */}
           <div className="relative flex-1 min-w-48">
             <Search size={14} className="absolute left-3 top-2.5 text-zinc-500" />
             <input
               type="text"
-              placeholder="Search symbol, reason, notes..."
+              placeholder={tb.search}
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg pl-9 pr-3 py-2 text-zinc-300 text-xs focus:outline-none focus:border-amber-400/50 placeholder:text-zinc-600"
@@ -154,42 +170,37 @@ export default function TradesTable({ trades, onEdit, onDelete }: TradesTablePro
             )}
           </div>
 
-          {/* Date Filter */}
           <select value={dateFilter} onChange={e => setDateFilter(e.target.value as DateFilter)} className={selectClass}>
-            <option value="all">All Dates</option>
-            <option value="today">Today</option>
-            <option value="week">This Week</option>
-            <option value="month">This Month</option>
+            <option value="all">{tb.allDates}</option>
+            <option value="today">{tb.todayFilter}</option>
+            <option value="week">{tb.thisWeekFilter}</option>
+            <option value="month">{tb.thisMonthFilter}</option>
           </select>
 
-          {/* Status */}
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className={selectClass}>
-            <option value="all">All Status</option>
+            <option value="all">{tb.allStatus}</option>
             <option value="Win">Win</option>
             <option value="Loss">Loss</option>
             <option value="Break Even">Break Even</option>
           </select>
 
-          {/* Type */}
           <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className={selectClass}>
-            <option value="all">Long & Short</option>
-            <option value="Long">Long only</option>
-            <option value="Short">Short only</option>
+            <option value="all">{tb.longShort}</option>
+            <option value="Long">{tb.longOnly}</option>
+            <option value="Short">{tb.shortOnly}</option>
           </select>
 
-          {/* Symbol */}
           <select value={symbolFilter} onChange={e => setSymbolFilter(e.target.value)} className={selectClass}>
-            <option value="all">All Symbols</option>
+            <option value="all">{tb.allSymbols}</option>
             {symbols.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
 
-          {/* Clear */}
           {(search || dateFilter !== 'all' || statusFilter !== 'all' || typeFilter !== 'all' || symbolFilter !== 'all') && (
             <button
               onClick={() => { setSearch(''); setDateFilter('all'); setStatusFilter('all'); setTypeFilter('all'); setSymbolFilter('all') }}
               className="px-3 py-2 border border-[#2a2a2a] rounded-lg text-zinc-500 hover:text-white text-xs transition-colors"
             >
-              Clear all
+              {tb.clearAll}
             </button>
           )}
         </div>
@@ -198,7 +209,7 @@ export default function TradesTable({ trades, onEdit, onDelete }: TradesTablePro
       {/* Table */}
       {filtered.length === 0 ? (
         <div className="bg-[#111111] border border-[#1e1e1e] rounded-xl p-12 text-center">
-          <p className="text-zinc-500 text-sm">No trades match your filters</p>
+          <p className="text-zinc-500 text-sm">{tb.noMatch}</p>
         </div>
       ) : (
         <div className="bg-[#111111] border border-[#1e1e1e] rounded-xl overflow-hidden">
@@ -206,18 +217,7 @@ export default function TradesTable({ trades, onEdit, onDelete }: TradesTablePro
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[#1e1e1e]">
-                  {[
-                    { label: 'Date', field: 'date' as SortField },
-                    { label: 'Symbol', field: 'symbol' as SortField },
-                    { label: 'Type', field: null },
-                    { label: 'P&L', field: 'pnl' as SortField },
-                    { label: 'Risk', field: 'risk' as SortField },
-                    { label: 'Planned RR', field: null },
-                    { label: 'Actual RR', field: 'actualRR' as SortField },
-                    { label: 'Status', field: 'status' as SortField },
-                    { label: 'Rules', field: null },
-                    { label: 'Actions', field: null },
-                  ].map(({ label, field }) => (
+                  {cols.map(({ label, field }) => (
                     <th
                       key={label}
                       className={`text-left px-4 py-3 text-zinc-500 text-xs font-medium uppercase tracking-wide whitespace-nowrap ${field ? 'cursor-pointer hover:text-zinc-300 select-none' : ''}`}
@@ -293,7 +293,7 @@ export default function TradesTable({ trades, onEdit, onDelete }: TradesTablePro
                               onClick={() => { onDelete(trade.id); setDeleteConfirm(null) }}
                               className="text-xs text-red-400 hover:text-red-300 font-medium"
                             >
-                              Confirm
+                              {tb.confirm}
                             </button>
                             <button
                               onClick={() => setDeleteConfirm(null)}

@@ -1,6 +1,7 @@
 'use client'
 
 import { ViewType } from '@/lib/types'
+import { useLanguage } from '@/components/LanguageContext'
 import {
   LayoutDashboard,
   PlusCircle,
@@ -10,21 +11,8 @@ import {
   TrendingUp,
   LogOut,
   User,
+  Settings,
 } from 'lucide-react'
-
-interface NavItem {
-  id: ViewType
-  label: string
-  icon: React.ReactNode
-}
-
-const navItems: NavItem[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
-  { id: 'add-trade', label: 'Add Trade', icon: <PlusCircle size={18} /> },
-  { id: 'trades', label: 'Trade Log', icon: <Table2 size={18} /> },
-  { id: 'analytics', label: 'Analytics', icon: <BarChart3 size={18} /> },
-  { id: 'discipline', label: 'Discipline', icon: <Shield size={18} /> },
-]
 
 interface NavigationProps {
   activeView: ViewType
@@ -35,16 +23,28 @@ interface NavigationProps {
 }
 
 export default function Navigation({ activeView, onViewChange, totalPnL, userEmail, onLogout }: NavigationProps) {
+  const { t, lang } = useLanguage()
+  const n = t.nav
+  const isRtl = lang === 'he'
   const isPositive = totalPnL >= 0
+
+  const navItems = [
+    { id: 'dashboard' as ViewType, label: n.dashboard, icon: <LayoutDashboard size={18} /> },
+    { id: 'add-trade' as ViewType, label: n.addTrade, icon: <PlusCircle size={18} /> },
+    { id: 'trades' as ViewType, label: n.tradeLog, icon: <Table2 size={18} /> },
+    { id: 'analytics' as ViewType, label: n.analytics, icon: <BarChart3 size={18} /> },
+    { id: 'discipline' as ViewType, label: n.discipline, icon: <Shield size={18} /> },
+    { id: 'settings' as ViewType, label: n.settings, icon: <Settings size={18} /> },
+  ]
 
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex flex-col w-56 min-h-screen bg-[#0d0d0d] border-r border-[#1e1e1e] fixed left-0 top-0 bottom-0 z-40">
+      <aside className={`hidden lg:flex flex-col w-56 min-h-screen bg-[#0d0d0d] border-[#1e1e1e] fixed top-0 bottom-0 z-40 ${isRtl ? 'right-0 border-l' : 'left-0 border-r'}`}>
         {/* Logo */}
         <div className="p-5 border-b border-[#1e1e1e]">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-amber-400/10 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-amber-400/10 flex items-center justify-center flex-shrink-0">
               <TrendingUp size={16} className="text-amber-400" />
             </div>
             <div>
@@ -56,7 +56,7 @@ export default function Navigation({ activeView, onViewChange, totalPnL, userEma
 
         {/* P&L Summary */}
         <div className="px-4 py-3 border-b border-[#1e1e1e]">
-          <p className="text-zinc-500 text-[10px] uppercase tracking-widest mb-1">Total P&L</p>
+          <p className="text-zinc-500 text-[10px] uppercase tracking-widest mb-1">{n.totalPnL}</p>
           <p className={`text-lg font-bold ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
             {isPositive ? '+' : ''}{totalPnL.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}
           </p>
@@ -72,7 +72,7 @@ export default function Navigation({ activeView, onViewChange, totalPnL, userEma
                 activeView === item.id
                   ? 'bg-amber-400/10 text-amber-400 border border-amber-400/20'
                   : 'text-zinc-400 hover:text-white hover:bg-white/5'
-              }`}
+              } ${isRtl ? 'flex-row-reverse text-right' : ''}`}
             >
               {item.icon}
               {item.label}
@@ -83,7 +83,7 @@ export default function Navigation({ activeView, onViewChange, totalPnL, userEma
         {/* User Info + Logout */}
         {userEmail && (
           <div className="p-3 border-t border-[#1e1e1e] space-y-2">
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1a1a1a]">
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1a1a1a] ${isRtl ? 'flex-row-reverse' : ''}`}>
               <div className="w-6 h-6 rounded-full bg-amber-400/20 flex items-center justify-center flex-shrink-0">
                 <User size={12} className="text-amber-400" />
               </div>
@@ -91,10 +91,10 @@ export default function Navigation({ activeView, onViewChange, totalPnL, userEma
             </div>
             <button
               onClick={onLogout}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-400/5 transition-all text-sm"
+              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-400/5 transition-all text-sm ${isRtl ? 'flex-row-reverse' : ''}`}
             >
               <LogOut size={15} />
-              Sign Out
+              {n.signOut}
             </button>
           </div>
         )}

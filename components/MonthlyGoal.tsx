@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { MonthlyGoal } from '@/lib/types'
+import { useLanguage } from '@/components/LanguageContext'
 import { Target, Edit3, Check, X } from 'lucide-react'
 
 interface MonthlyGoalProps {
@@ -11,6 +12,9 @@ interface MonthlyGoalProps {
 }
 
 export default function MonthlyGoalCard({ goal, currentPnL, onUpdate }: MonthlyGoalProps) {
+  const { t } = useLanguage()
+  const g = t.goal
+
   const [editing, setEditing] = useState(false)
   const [inputAmount, setInputAmount] = useState(String(goal.amount))
   const [inputMonth, setInputMonth] = useState(goal.month)
@@ -34,29 +38,28 @@ export default function MonthlyGoalCard({ goal, currentPnL, onUpdate }: MonthlyG
 
   const monthLabel = new Date(goal.month + '-01T12:00:00').toLocaleString('en-US', { month: 'long', year: 'numeric' })
 
+  const statusText = isAhead
+    ? g.achieved((currentPnL - goal.amount).toLocaleString())
+    : currentPnL < 0
+    ? g.atLoss(Math.abs(currentPnL + goal.amount).toLocaleString())
+    : g.remaining((goal.amount - currentPnL).toLocaleString())
+
   return (
     <div className="bg-[#111111] border border-[#1e1e1e] rounded-xl p-5">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Target size={16} className="text-amber-400" />
-          <span className="text-white font-semibold text-sm">Monthly Goal</span>
+          <span className="text-white font-semibold text-sm">{g.title}</span>
           <span className="text-zinc-500 text-xs">{monthLabel}</span>
         </div>
         {!editing ? (
-          <button
-            onClick={() => setEditing(true)}
-            className="text-zinc-500 hover:text-amber-400 transition-colors"
-          >
+          <button onClick={() => setEditing(true)} className="text-zinc-500 hover:text-amber-400 transition-colors">
             <Edit3 size={14} />
           </button>
         ) : (
           <div className="flex gap-2">
-            <button onClick={handleSave} className="text-emerald-400 hover:text-emerald-300">
-              <Check size={14} />
-            </button>
-            <button onClick={handleCancel} className="text-red-400 hover:text-red-300">
-              <X size={14} />
-            </button>
+            <button onClick={handleSave} className="text-emerald-400 hover:text-emerald-300"><Check size={14} /></button>
+            <button onClick={handleCancel} className="text-red-400 hover:text-red-300"><X size={14} /></button>
           </div>
         )}
       </div>
@@ -64,7 +67,7 @@ export default function MonthlyGoalCard({ goal, currentPnL, onUpdate }: MonthlyG
       {editing && (
         <div className="flex gap-3 mb-4">
           <div className="flex-1">
-            <label className="text-zinc-500 text-xs mb-1 block">Goal Amount ($)</label>
+            <label className="text-zinc-500 text-xs mb-1 block">{g.goalAmount}</label>
             <input
               type="number"
               value={inputAmount}
@@ -73,7 +76,7 @@ export default function MonthlyGoalCard({ goal, currentPnL, onUpdate }: MonthlyG
             />
           </div>
           <div>
-            <label className="text-zinc-500 text-xs mb-1 block">Month</label>
+            <label className="text-zinc-500 text-xs mb-1 block">{g.month}</label>
             <input
               type="month"
               value={inputMonth}
@@ -107,7 +110,6 @@ export default function MonthlyGoalCard({ goal, currentPnL, onUpdate }: MonthlyG
           }`}
           style={{ width: `${progressClamped}%` }}
         />
-        {/* Glow effect */}
         {progressClamped > 0 && (
           <div
             className={`absolute top-0 h-full rounded-full opacity-30 blur-sm ${
@@ -119,11 +121,7 @@ export default function MonthlyGoalCard({ goal, currentPnL, onUpdate }: MonthlyG
       </div>
 
       <p className={`text-xs mt-2 ${isAhead ? 'text-amber-400' : 'text-zinc-500'}`}>
-        {isAhead
-          ? `🎯 Goal achieved! +$${(currentPnL - goal.amount).toLocaleString()} above target`
-          : currentPnL < 0
-          ? `$${Math.abs(currentPnL + goal.amount).toLocaleString()} to reach goal (currently at a loss)`
-          : `$${(goal.amount - currentPnL).toLocaleString()} remaining to reach goal`}
+        {statusText}
       </p>
     </div>
   )

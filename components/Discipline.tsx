@@ -2,6 +2,7 @@
 
 import { Trade } from '@/lib/types'
 import { getDisciplineStats } from '@/lib/calculations'
+import { useLanguage } from '@/components/LanguageContext'
 import { Shield, CheckCircle, XCircle, MessageSquare, TrendingUp } from 'lucide-react'
 
 interface DisciplineProps {
@@ -14,17 +15,13 @@ function fmt(n: number, sign = false): string {
 }
 
 export default function Discipline({ trades }: DisciplineProps) {
-  const d = getDisciplineStats(trades)
+  const { t } = useLanguage()
+  const d = t.discipline
+
+  const stats = getDisciplineStats(trades)
   const totalTrades = trades.length
 
-  const overallDisciplineRate = totalTrades > 0 ? (d.followedCount / totalTrades) * 100 : 0
-  const isDisciplined = overallDisciplineRate >= 70
-
-  const messageType: 'positive' | 'warning' | 'neutral' =
-    d.followedPnL > 0 && d.notFollowedPnL <= 0 ? 'positive' :
-    d.followedWinRate > d.notFollowedWinRate ? 'positive' :
-    d.notFollowedCount > d.followedCount ? 'warning' :
-    'neutral'
+  const overallDisciplineRate = totalTrades > 0 ? (stats.followedCount / totalTrades) * 100 : 0
 
   const messageStyle = {
     positive: 'bg-emerald-400/5 border-emerald-400/20 text-emerald-400',
@@ -32,12 +29,31 @@ export default function Discipline({ trades }: DisciplineProps) {
     neutral: 'bg-amber-400/5 border-amber-400/20 text-amber-400',
   }
 
+  const messageType: 'positive' | 'warning' | 'neutral' =
+    stats.followedPnL > 0 && stats.notFollowedPnL <= 0 ? 'positive' :
+    stats.followedWinRate > stats.notFollowedWinRate ? 'positive' :
+    stats.notFollowedCount > stats.followedCount ? 'warning' :
+    'neutral'
+
+  // Compute translated message based on same conditions as getDisciplineStats
+  let message = d.msg4
+  if (stats.followedCount > 0 && stats.notFollowedCount > 0) {
+    if (stats.followedPnL > 0 && stats.notFollowedPnL < 0) message = d.msg1
+    else if (stats.followedWinRate > stats.notFollowedWinRate + 10) message = d.msg2
+    else if (stats.followedPnL > stats.notFollowedPnL) message = d.msg3
+    else message = d.msg4
+  } else if (stats.notFollowedCount === 0 && stats.followedCount > 0) {
+    message = d.msg5
+  } else {
+    message = d.msg6
+  }
+
   if (trades.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 text-zinc-500">
         <div className="text-center">
           <Shield size={40} className="mx-auto mb-3 opacity-30" />
-          <p>No trades to analyze</p>
+          <p>{d.noTrades}</p>
         </div>
       </div>
     )
@@ -49,24 +65,20 @@ export default function Discipline({ trades }: DisciplineProps) {
       <div>
         <h1 className="text-white text-2xl font-bold flex items-center gap-2">
           <Shield size={22} className="text-amber-400" />
-          Trading Discipline
+          {d.title}
         </h1>
-        <p className="text-zinc-500 text-sm mt-0.5">
-          Track how well you follow your trading rules and their impact on performance
-        </p>
+        <p className="text-zinc-500 text-sm mt-0.5">{d.subtitle}</p>
       </div>
 
       {/* Overall Score */}
       <div className="bg-[#111111] border border-[#1e1e1e] rounded-xl p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-zinc-500 text-xs uppercase tracking-widest font-medium mb-1">Discipline Score</p>
+            <p className="text-zinc-500 text-xs uppercase tracking-widest font-medium mb-1">{d.disciplineScore}</p>
             <p className={`text-5xl font-black ${overallDisciplineRate >= 70 ? 'text-emerald-400' : overallDisciplineRate >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
               {overallDisciplineRate.toFixed(0)}%
             </p>
-            <p className="text-zinc-500 text-sm mt-1">
-              {d.followedCount} of {totalTrades} trades followed your rules
-            </p>
+            <p className="text-zinc-500 text-sm mt-1">{d.scoreSub(stats.followedCount, totalTrades)}</p>
           </div>
           <div className="relative w-24 h-24">
             <svg viewBox="0 0 36 36" className="w-24 h-24 -rotate-90">
@@ -86,7 +98,6 @@ export default function Discipline({ trades }: DisciplineProps) {
           </div>
         </div>
 
-        {/* Score Bar */}
         <div className="h-2 bg-[#1a1a1a] rounded-full overflow-hidden">
           <div
             className={`h-full rounded-full transition-all ${
@@ -96,9 +107,9 @@ export default function Discipline({ trades }: DisciplineProps) {
           />
         </div>
         <div className="flex justify-between text-[10px] text-zinc-600 mt-1">
-          <span>Undisciplined</span>
-          <span>70% = Good</span>
-          <span>Excellent</span>
+          <span>{d.undisciplined}</span>
+          <span>{d.good}</span>
+          <span>{d.excellent}</span>
         </div>
       </div>
 
@@ -107,8 +118,8 @@ export default function Discipline({ trades }: DisciplineProps) {
         <div className="flex gap-3 items-start">
           <MessageSquare size={18} className="mt-0.5 flex-shrink-0" />
           <div>
-            <p className="font-semibold text-sm mb-1">System Insight</p>
-            <p className="text-sm opacity-90 leading-relaxed">{d.message}</p>
+            <p className="font-semibold text-sm mb-1">{d.systemInsight}</p>
+            <p className="text-sm opacity-90 leading-relaxed">{message}</p>
           </div>
         </div>
       </div>
@@ -119,43 +130,41 @@ export default function Discipline({ trades }: DisciplineProps) {
         <div className="bg-[#111111] border border-emerald-400/15 rounded-xl p-5">
           <div className="flex items-center gap-2 mb-4">
             <CheckCircle size={16} className="text-emerald-400" />
-            <h3 className="text-emerald-400 font-semibold text-sm">Trades Following Rules</h3>
+            <h3 className="text-emerald-400 font-semibold text-sm">{d.followingRules}</h3>
           </div>
 
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div className="bg-[#1a1a1a] rounded-lg p-3 text-center">
-              <p className="text-emerald-400 text-2xl font-bold">{d.followedCount}</p>
-              <p className="text-zinc-500 text-xs mt-0.5">Trades</p>
+              <p className="text-emerald-400 text-2xl font-bold">{stats.followedCount}</p>
+              <p className="text-zinc-500 text-xs mt-0.5">{d.trades}</p>
             </div>
             <div className="bg-[#1a1a1a] rounded-lg p-3 text-center">
-              <p className={`text-2xl font-bold ${d.followedPnL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                {d.followedPnL >= 0 ? '+' : ''}{fmt(d.followedPnL)}
+              <p className={`text-2xl font-bold ${stats.followedPnL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {stats.followedPnL >= 0 ? '+' : ''}{fmt(stats.followedPnL)}
               </p>
-              <p className="text-zinc-500 text-xs mt-0.5">Net P&L</p>
+              <p className="text-zinc-500 text-xs mt-0.5">{d.netPnL}</p>
             </div>
           </div>
 
           <div className="space-y-2">
             <div className="flex justify-between py-2 border-b border-[#1e1e1e]">
-              <span className="text-zinc-400 text-sm">Win Rate</span>
-              <span className={`font-semibold text-sm ${d.followedWinRate >= 50 ? 'text-emerald-400' : 'text-red-400'}`}>
-                {d.followedWinRate.toFixed(1)}%
-              </span>
+              <span className="text-zinc-400 text-sm">{d.winRate}</span>
+              <span className={`font-semibold text-sm ${stats.followedWinRate >= 50 ? 'text-emerald-400' : 'text-red-400'}`}>{stats.followedWinRate.toFixed(1)}%</span>
             </div>
             <div className="flex justify-between py-2 border-b border-[#1e1e1e]">
-              <span className="text-zinc-400 text-sm">Wins</span>
-              <span className="text-emerald-400 font-semibold text-sm">{d.followedWins}</span>
+              <span className="text-zinc-400 text-sm">{d.wins}</span>
+              <span className="text-emerald-400 font-semibold text-sm">{stats.followedWins}</span>
             </div>
             <div className="flex justify-between py-2 border-b border-[#1e1e1e]">
-              <span className="text-zinc-400 text-sm">Losses</span>
+              <span className="text-zinc-400 text-sm">{d.losses}</span>
               <span className="text-red-400 font-semibold text-sm">
-                {d.followedCount - d.followedWins - (trades.filter(t => t.followedRules && t.status === 'Break Even').length)}
+                {stats.followedCount - stats.followedWins - (trades.filter(tr => tr.followedRules && tr.status === 'Break Even').length)}
               </span>
             </div>
             <div className="flex justify-between py-2">
-              <span className="text-zinc-400 text-sm">Avg P&L per trade</span>
-              <span className={`font-semibold text-sm ${d.followedCount > 0 && d.followedPnL / d.followedCount >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                {d.followedCount > 0 ? fmt(d.followedPnL / d.followedCount, true) : '$0'}
+              <span className="text-zinc-400 text-sm">{d.avgPerTrade}</span>
+              <span className={`font-semibold text-sm ${stats.followedCount > 0 && stats.followedPnL / stats.followedCount >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {stats.followedCount > 0 ? fmt(stats.followedPnL / stats.followedCount, true) : '$0'}
               </span>
             </div>
           </div>
@@ -165,43 +174,39 @@ export default function Discipline({ trades }: DisciplineProps) {
         <div className="bg-[#111111] border border-red-400/15 rounded-xl p-5">
           <div className="flex items-center gap-2 mb-4">
             <XCircle size={16} className="text-red-400" />
-            <h3 className="text-red-400 font-semibold text-sm">Trades Breaking Rules</h3>
+            <h3 className="text-red-400 font-semibold text-sm">{d.breakingRules}</h3>
           </div>
 
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div className="bg-[#1a1a1a] rounded-lg p-3 text-center">
-              <p className="text-red-400 text-2xl font-bold">{d.notFollowedCount}</p>
-              <p className="text-zinc-500 text-xs mt-0.5">Trades</p>
+              <p className="text-red-400 text-2xl font-bold">{stats.notFollowedCount}</p>
+              <p className="text-zinc-500 text-xs mt-0.5">{d.trades}</p>
             </div>
             <div className="bg-[#1a1a1a] rounded-lg p-3 text-center">
-              <p className={`text-2xl font-bold ${d.notFollowedPnL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                {d.notFollowedPnL >= 0 ? '+' : ''}{fmt(d.notFollowedPnL)}
+              <p className={`text-2xl font-bold ${stats.notFollowedPnL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {stats.notFollowedPnL >= 0 ? '+' : ''}{fmt(stats.notFollowedPnL)}
               </p>
-              <p className="text-zinc-500 text-xs mt-0.5">Net P&L</p>
+              <p className="text-zinc-500 text-xs mt-0.5">{d.netPnL}</p>
             </div>
           </div>
 
           <div className="space-y-2">
             <div className="flex justify-between py-2 border-b border-[#1e1e1e]">
-              <span className="text-zinc-400 text-sm">Win Rate</span>
-              <span className={`font-semibold text-sm ${d.notFollowedWinRate >= 50 ? 'text-emerald-400' : 'text-red-400'}`}>
-                {d.notFollowedWinRate.toFixed(1)}%
-              </span>
+              <span className="text-zinc-400 text-sm">{d.winRate}</span>
+              <span className={`font-semibold text-sm ${stats.notFollowedWinRate >= 50 ? 'text-emerald-400' : 'text-red-400'}`}>{stats.notFollowedWinRate.toFixed(1)}%</span>
             </div>
             <div className="flex justify-between py-2 border-b border-[#1e1e1e]">
-              <span className="text-zinc-400 text-sm">Wins</span>
-              <span className="text-emerald-400 font-semibold text-sm">
-                {trades.filter(t => !t.followedRules && t.status === 'Win').length}
-              </span>
+              <span className="text-zinc-400 text-sm">{d.wins}</span>
+              <span className="text-emerald-400 font-semibold text-sm">{trades.filter(tr => !tr.followedRules && tr.status === 'Win').length}</span>
             </div>
             <div className="flex justify-between py-2 border-b border-[#1e1e1e]">
-              <span className="text-zinc-400 text-sm">Losses</span>
-              <span className="text-red-400 font-semibold text-sm">{d.notFollowedLosses}</span>
+              <span className="text-zinc-400 text-sm">{d.losses}</span>
+              <span className="text-red-400 font-semibold text-sm">{stats.notFollowedLosses}</span>
             </div>
             <div className="flex justify-between py-2">
-              <span className="text-zinc-400 text-sm">Avg P&L per trade</span>
-              <span className={`font-semibold text-sm ${d.notFollowedCount > 0 && d.notFollowedPnL / d.notFollowedCount >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                {d.notFollowedCount > 0 ? fmt(d.notFollowedPnL / d.notFollowedCount, true) : '$0'}
+              <span className="text-zinc-400 text-sm">{d.avgPerTrade}</span>
+              <span className={`font-semibold text-sm ${stats.notFollowedCount > 0 && stats.notFollowedPnL / stats.notFollowedCount >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {stats.notFollowedCount > 0 ? fmt(stats.notFollowedPnL / stats.notFollowedCount, true) : '$0'}
               </span>
             </div>
           </div>
@@ -209,14 +214,14 @@ export default function Discipline({ trades }: DisciplineProps) {
       </div>
 
       {/* P&L Comparison Visual */}
-      {d.followedCount > 0 && d.notFollowedCount > 0 && (
+      {stats.followedCount > 0 && stats.notFollowedCount > 0 && (
         <div className="bg-[#111111] border border-[#1e1e1e] rounded-xl p-5">
-          <p className="text-amber-400 text-xs font-semibold uppercase tracking-widest mb-5">P&L Impact Comparison</p>
+          <p className="text-amber-400 text-xs font-semibold uppercase tracking-widest mb-5">{d.pnlComparison}</p>
           {[
-            { label: '✓ With Rules', pnl: d.followedPnL, color: 'bg-emerald-500' },
-            { label: '✗ Without Rules', pnl: d.notFollowedPnL, color: 'bg-red-500' },
+            { label: d.withRules, pnl: stats.followedPnL, color: 'bg-emerald-500' },
+            { label: d.withoutRules, pnl: stats.notFollowedPnL, color: 'bg-red-500' },
           ].map(({ label, pnl, color }) => {
-            const maxAbs = Math.max(Math.abs(d.followedPnL), Math.abs(d.notFollowedPnL), 1)
+            const maxAbs = Math.max(Math.abs(stats.followedPnL), Math.abs(stats.notFollowedPnL), 1)
             const width = (Math.abs(pnl) / maxAbs) * 100
             return (
               <div key={label} className="mb-4 last:mb-0">
@@ -227,10 +232,7 @@ export default function Discipline({ trades }: DisciplineProps) {
                   </span>
                 </div>
                 <div className="h-3 bg-[#1a1a1a] rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full ${color} transition-all duration-700`}
-                    style={{ width: `${width}%`, opacity: pnl < 0 ? 0.6 : 1 }}
-                  />
+                  <div className={`h-full rounded-full ${color} transition-all duration-700`} style={{ width: `${width}%`, opacity: pnl < 0 ? 0.6 : 1 }} />
                 </div>
               </div>
             )
@@ -242,24 +244,18 @@ export default function Discipline({ trades }: DisciplineProps) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-[#111111] border border-[#1e1e1e] rounded-xl p-4 text-center">
           <TrendingUp size={20} className="mx-auto mb-2 text-emerald-400" />
-          <p className="text-2xl font-bold text-emerald-400">
-            {d.followedWinRate.toFixed(0)}%
-          </p>
-          <p className="text-zinc-500 text-xs mt-1">Win rate when following rules</p>
+          <p className="text-2xl font-bold text-emerald-400">{stats.followedWinRate.toFixed(0)}%</p>
+          <p className="text-zinc-500 text-xs mt-1">{d.winRateFollowed}</p>
         </div>
         <div className="bg-[#111111] border border-[#1e1e1e] rounded-xl p-4 text-center">
           <Shield size={20} className="mx-auto mb-2 text-amber-400" />
-          <p className="text-2xl font-bold text-amber-400">
-            {overallDisciplineRate.toFixed(0)}%
-          </p>
-          <p className="text-zinc-500 text-xs mt-1">Overall discipline rate</p>
+          <p className="text-2xl font-bold text-amber-400">{overallDisciplineRate.toFixed(0)}%</p>
+          <p className="text-zinc-500 text-xs mt-1">{d.overallDiscipline}</p>
         </div>
         <div className="bg-[#111111] border border-[#1e1e1e] rounded-xl p-4 text-center">
           <XCircle size={20} className="mx-auto mb-2 text-red-400" />
-          <p className="text-2xl font-bold text-red-400">
-            {d.notFollowedWinRate.toFixed(0)}%
-          </p>
-          <p className="text-zinc-500 text-xs mt-1">Win rate when breaking rules</p>
+          <p className="text-2xl font-bold text-red-400">{stats.notFollowedWinRate.toFixed(0)}%</p>
+          <p className="text-zinc-500 text-xs mt-1">{d.winRateBroken}</p>
         </div>
       </div>
     </div>

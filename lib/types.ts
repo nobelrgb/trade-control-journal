@@ -22,4 +22,4 @@ export interface MonthlyGoal {
   month: string
 }
 
-export type ViewType = 'dashboard' | 'add-trade' | 'trades' | 'analytics' | 'discipline'
+export type ViewType = 'dashboard' | 'add-trade' | 'trades' | 'analytics' | 'discipline' | 'settings'

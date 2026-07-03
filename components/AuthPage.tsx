@@ -2,11 +2,15 @@
 
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useLanguage } from '@/components/LanguageContext'
 import { TrendingUp, Mail, Lock, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react'
 
 type AuthMode = 'login' | 'register'
 
 export default function AuthPage() {
+  const { t } = useLanguage()
+  const a = t.auth
+
   const [mode, setMode] = useState<AuthMode>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -28,18 +32,15 @@ export default function AuthPage() {
       } else {
         const { error } = await supabase.auth.signUp({ email, password })
         if (error) throw error
-        setSuccess('Account created! Check your email to confirm, or log in directly if email confirmation is disabled.')
+        setSuccess(a.accountCreated)
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Something went wrong'
       setError(
-        msg.includes('Invalid login credentials')
-          ? 'Wrong email or password. Please try again.'
-          : msg.includes('User already registered')
-          ? 'An account with this email already exists. Try logging in.'
-          : msg.includes('Password should be at least')
-          ? 'Password must be at least 6 characters.'
-          : msg
+        msg.includes('Invalid login credentials') ? a.wrongCredentials :
+        msg.includes('User already registered') ? a.alreadyRegistered :
+        msg.includes('Password should be at least') ? a.passwordTooShort :
+        msg
       )
     } finally {
       setLoading(false)
@@ -53,7 +54,6 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
-      {/* Background gradient */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-amber-400/3 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-1/4 w-[400px] h-[200px] bg-emerald-400/3 rounded-full blur-3xl" />
@@ -66,7 +66,7 @@ export default function AuthPage() {
             <TrendingUp size={28} className="text-amber-400" />
           </div>
           <h1 className="text-white text-2xl font-bold">Trade Control Journal</h1>
-          <p className="text-zinc-500 text-sm mt-1">Your personal trading performance tracker</p>
+          <p className="text-zinc-500 text-sm mt-1">{a.subtitle}</p>
         </div>
 
         {/* Card */}
@@ -82,7 +82,7 @@ export default function AuthPage() {
                   : 'text-zinc-500 hover:text-zinc-300'
               }`}
             >
-              Sign In
+              {a.signIn}
             </button>
             <button
               type="button"
@@ -93,16 +93,13 @@ export default function AuthPage() {
                   : 'text-zinc-500 hover:text-zinc-300'
               }`}
             >
-              Create Account
+              {a.createAccount}
             </button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Email */}
             <div>
-              <label className="text-zinc-400 text-xs font-medium uppercase tracking-wide mb-1.5 block">
-                Email
-              </label>
+              <label className="text-zinc-400 text-xs font-medium uppercase tracking-wide mb-1.5 block">{a.email}</label>
               <div className="relative">
                 <Mail size={15} className="absolute left-4 top-3.5 text-zinc-500" />
                 <input
@@ -117,18 +114,15 @@ export default function AuthPage() {
               </div>
             </div>
 
-            {/* Password */}
             <div>
-              <label className="text-zinc-400 text-xs font-medium uppercase tracking-wide mb-1.5 block">
-                Password
-              </label>
+              <label className="text-zinc-400 text-xs font-medium uppercase tracking-wide mb-1.5 block">{a.password}</label>
               <div className="relative">
                 <Lock size={15} className="absolute left-4 top-3.5 text-zinc-500" />
                 <input
                   type={showPass ? 'text' : 'password'}
                   required
                   minLength={6}
-                  placeholder={mode === 'register' ? 'At least 6 characters' : '••••••••'}
+                  placeholder={mode === 'register' ? a.passwordPlaceholder : '••••••••'}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   className={inputClass + ' pl-11 pr-11'}
@@ -144,7 +138,6 @@ export default function AuthPage() {
               </div>
             </div>
 
-            {/* Error */}
             {error && (
               <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
                 <AlertCircle size={15} className="text-red-400 mt-0.5 flex-shrink-0" />
@@ -152,14 +145,12 @@ export default function AuthPage() {
               </div>
             )}
 
-            {/* Success */}
             {success && (
               <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3">
                 <p className="text-emerald-400 text-sm">{success}</p>
               </div>
             )}
 
-            {/* Submit */}
             <button
               type="submit"
               disabled={loading}
@@ -168,27 +159,24 @@ export default function AuthPage() {
               {loading ? (
                 <>
                   <Loader2 size={16} className="animate-spin" />
-                  {mode === 'login' ? 'Signing in...' : 'Creating account...'}
+                  {mode === 'login' ? a.signingIn : a.creatingAccount}
                 </>
               ) : (
-                mode === 'login' ? 'Sign In' : 'Create My Account'
+                mode === 'login' ? a.signInBtn : a.createBtn
               )}
             </button>
           </form>
 
-          {/* Footer */}
           <p className="text-zinc-600 text-xs text-center mt-5">
             {mode === 'login' ? (
-              <>No account? <button onClick={() => { setMode('register'); setError('') }} className="text-amber-400 hover:text-amber-300">Create one</button></>
+              <>{a.noAccount} <button onClick={() => { setMode('register'); setError('') }} className="text-amber-400 hover:text-amber-300">{a.createOne}</button></>
             ) : (
-              <>Already have an account? <button onClick={() => { setMode('login'); setError('') }} className="text-amber-400 hover:text-amber-300">Sign in</button></>
+              <>{a.haveAccount} <button onClick={() => { setMode('login'); setError('') }} className="text-amber-400 hover:text-amber-300">{a.signInLink}</button></>
             )}
           </p>
         </div>
 
-        <p className="text-zinc-700 text-xs text-center mt-4">
-          Your data is private and encrypted · Powered by Supabase
-        </p>
+        <p className="text-zinc-700 text-xs text-center mt-4">{a.privacy}</p>
       </div>
     </div>
   )

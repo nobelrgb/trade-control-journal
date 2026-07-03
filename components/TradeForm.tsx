@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Trade } from '@/lib/types'
+import { useLanguage } from '@/components/LanguageContext'
 import { Upload, X, ChevronDown } from 'lucide-react'
 
 interface TradeFormProps {
@@ -67,13 +68,15 @@ const inputClass = 'w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-3 
 const labelClass = 'text-zinc-400 text-xs font-medium mb-1.5 block uppercase tracking-wide'
 
 export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFormProps) {
+  const { t } = useLanguage()
+  const f = t.form
+
   const [form, setForm] = useState(defaultForm)
   const [symbolSearch, setSymbolSearch] = useState('')
   const [showSymbolDropdown, setShowSymbolDropdown] = useState(false)
   const [previewImg, setPreviewImg] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Load draft on mount (only for new trades, not editing)
   useEffect(() => {
     if (!editingTrade) {
       try {
@@ -88,7 +91,6 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
     }
   }, [])
 
-  // Auto-save draft as user types (only for new trades)
   useEffect(() => {
     if (!editingTrade) {
       localStorage.setItem(DRAFT_KEY, JSON.stringify(form))
@@ -118,7 +120,7 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
     }
   }, [editingTrade])
 
-  const set = (key: string, value: unknown) => setForm(f => ({ ...f, [key]: value }))
+  const set = (key: string, value: unknown) => setForm(prev => ({ ...prev, [key]: value }))
 
   const filteredSymbols = SYMBOLS.filter(s =>
     s.toLowerCase().includes(symbolSearch.toLowerCase())
@@ -179,20 +181,26 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
     }
   }
 
+  const statusLabels: Record<string, string> = {
+    Win: f.win,
+    Loss: f.loss,
+    'Break Even': f.breakEven,
+  }
+
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-white text-2xl font-bold">{editingTrade ? 'Edit Trade' : 'Add New Trade'}</h1>
-        <p className="text-zinc-500 text-sm mt-0.5">Record your trade details for accurate tracking</p>
+        <h1 className="text-white text-2xl font-bold">{editingTrade ? f.editTitle : f.addTitle}</h1>
+        <p className="text-zinc-500 text-sm mt-0.5">{f.subtitle}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Section: Basics */}
         <div className="bg-[#111111] border border-[#1e1e1e] rounded-xl p-5">
-          <h3 className="text-amber-400 text-xs font-semibold uppercase tracking-widest mb-4">Trade Details</h3>
+          <h3 className="text-amber-400 text-xs font-semibold uppercase tracking-widest mb-4">{f.tradeDetails}</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <label className={labelClass}>Date *</label>
+              <label className={labelClass}>{f.date}</label>
               <input
                 type="date"
                 required
@@ -202,7 +210,7 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
               />
             </div>
             <div>
-              <label className={labelClass}>Time * (24h)</label>
+              <label className={labelClass}>{f.time}</label>
               <input
                 type="text"
                 required
@@ -226,7 +234,7 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
               />
             </div>
             <div className="col-span-2 md:col-span-1 relative">
-              <label className={labelClass}>Symbol *</label>
+              <label className={labelClass}>{f.symbol}</label>
               <div className="relative">
                 <input
                   type="text"
@@ -260,7 +268,7 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
               )}
             </div>
             <div>
-              <label className={labelClass}>Direction *</label>
+              <label className={labelClass}>{f.direction}</label>
               <div className="flex rounded-lg overflow-hidden border border-[#2a2a2a]">
                 <button
                   type="button"
@@ -269,7 +277,7 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
                     form.type === 'Long' ? 'bg-emerald-500/20 text-emerald-400' : 'text-zinc-500 hover:text-zinc-300'
                   } border-r border-[#2a2a2a]`}
                 >
-                  Long ↑
+                  {f.long}
                 </button>
                 <button
                   type="button"
@@ -278,7 +286,7 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
                     form.type === 'Short' ? 'bg-red-500/20 text-red-400' : 'text-zinc-500 hover:text-zinc-300'
                   }`}
                 >
-                  Short ↓
+                  {f.short}
                 </button>
               </div>
             </div>
@@ -287,10 +295,10 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
 
         {/* Section: P&L and Risk */}
         <div className="bg-[#111111] border border-[#1e1e1e] rounded-xl p-5">
-          <h3 className="text-amber-400 text-xs font-semibold uppercase tracking-widest mb-4">P&L & Risk Management</h3>
+          <h3 className="text-amber-400 text-xs font-semibold uppercase tracking-widest mb-4">{f.pnlRisk}</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <label className={labelClass}>P&L ($) *</label>
+              <label className={labelClass}>{f.pnl}</label>
               <div className="relative">
                 <span className="absolute left-3 top-2.5 text-zinc-500 text-sm">$</span>
                 <input
@@ -304,10 +312,10 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
                   className={inputClass + ' pl-7'}
                 />
               </div>
-              <p className="text-zinc-600 text-[10px] mt-1">Use negative for loss</p>
+              <p className="text-zinc-600 text-[10px] mt-1">{f.pnlHint}</p>
             </div>
             <div>
-              <label className={labelClass}>Risk ($) *</label>
+              <label className={labelClass}>{f.risk}</label>
               <div className="relative">
                 <span className="absolute left-3 top-2.5 text-zinc-500 text-sm">$</span>
                 <input
@@ -323,7 +331,7 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
               </div>
             </div>
             <div>
-              <label className={labelClass}>Planned R:R</label>
+              <label className={labelClass}>{f.plannedRR}</label>
               <input
                 type="number"
                 step="0.1"
@@ -334,7 +342,7 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
               />
             </div>
             <div>
-              <label className={labelClass}>Actual R:R</label>
+              <label className={labelClass}>{f.actualRR}</label>
               <input
                 type="number"
                 step="0.01"
@@ -343,13 +351,12 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
                 onChange={e => set('actualRR', e.target.value)}
                 className={inputClass}
               />
-              <p className="text-zinc-600 text-[10px] mt-1">Auto-fills from P&L ÷ Risk</p>
+              <p className="text-zinc-600 text-[10px] mt-1">{f.actualRRHint}</p>
             </div>
           </div>
 
-          {/* Status */}
           <div className="mt-4">
-            <label className={labelClass}>Outcome *</label>
+            <label className={labelClass}>{f.outcome}</label>
             <div className="flex gap-2">
               {(['Win', 'Loss', 'Break Even'] as const).map(s => (
                 <button
@@ -366,7 +373,7 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
                       : 'border-[#2a2a2a] text-zinc-500 hover:border-[#3a3a3a] hover:text-zinc-300'
                   }`}
                 >
-                  {s}
+                  {statusLabels[s]}
                 </button>
               ))}
             </div>
@@ -375,13 +382,13 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
 
         {/* Section: Entry Analysis */}
         <div className="bg-[#111111] border border-[#1e1e1e] rounded-xl p-5">
-          <h3 className="text-amber-400 text-xs font-semibold uppercase tracking-widest mb-4">Entry Analysis</h3>
+          <h3 className="text-amber-400 text-xs font-semibold uppercase tracking-widest mb-4">{f.entryAnalysis}</h3>
           <div className="space-y-4">
             <div>
-              <label className={labelClass}>Entry Reason</label>
+              <label className={labelClass}>{f.entryReason}</label>
               <textarea
                 rows={2}
-                placeholder="Describe your entry setup and reason..."
+                placeholder={f.entryReasonPlaceholder}
                 value={form.entryReason}
                 onChange={e => set('entryReason', e.target.value)}
                 className={inputClass + ' resize-none'}
@@ -389,21 +396,21 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className={labelClass}>Followed Trading Rules?</label>
+                <label className={labelClass}>{f.followedRules}</label>
                 <Toggle
                   value={form.followedRules}
                   onChange={v => set('followedRules', v)}
-                  labelTrue="Yes ✓"
-                  labelFalse="No ✗"
+                  labelTrue={f.yes}
+                  labelFalse={f.no}
                 />
               </div>
               <div>
-                <label className={labelClass}>Touched Trade After Entry?</label>
+                <label className={labelClass}>{f.touchedAfterEntry}</label>
                 <Toggle
                   value={form.touchedAfterEntry}
                   onChange={v => set('touchedAfterEntry', v)}
-                  labelTrue="Yes (modified)"
-                  labelFalse="No (hands off)"
+                  labelTrue={f.yesModified}
+                  labelFalse={f.noHandsOff}
                 />
               </div>
             </div>
@@ -412,22 +419,21 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
 
         {/* Section: Notes & Screenshot */}
         <div className="bg-[#111111] border border-[#1e1e1e] rounded-xl p-5">
-          <h3 className="text-amber-400 text-xs font-semibold uppercase tracking-widest mb-4">Notes & Screenshot</h3>
+          <h3 className="text-amber-400 text-xs font-semibold uppercase tracking-widest mb-4">{f.notesSection}</h3>
           <div className="space-y-4">
             <div>
-              <label className={labelClass}>Personal Notes</label>
+              <label className={labelClass}>{f.notes}</label>
               <textarea
                 rows={3}
-                placeholder="Reflections, lessons learned, what you did well or could improve..."
+                placeholder={f.notesPlaceholder}
                 value={form.notes}
                 onChange={e => set('notes', e.target.value)}
                 className={inputClass + ' resize-none'}
               />
             </div>
 
-            {/* Screenshot Upload */}
             <div>
-              <label className={labelClass}>Trade Screenshot</label>
+              <label className={labelClass}>{f.screenshot}</label>
               {previewImg ? (
                 <div className="relative">
                   <img
@@ -450,7 +456,7 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
                   className="w-full h-28 border-2 border-dashed border-[#2a2a2a] rounded-lg flex flex-col items-center justify-center gap-2 text-zinc-500 hover:border-amber-400/40 hover:text-amber-400/60 transition-all"
                 >
                   <Upload size={20} />
-                  <span className="text-sm">Click to upload screenshot</span>
+                  <span className="text-sm">{f.screenshotClick}</span>
                   <span className="text-xs">PNG, JPG, WebP</span>
                 </button>
               )}
@@ -471,7 +477,7 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
             type="submit"
             className="flex-1 py-3 bg-amber-400 text-black font-bold rounded-lg hover:bg-amber-300 transition-colors text-sm"
           >
-            {editingTrade ? 'Save Changes' : 'Add Trade'}
+            {editingTrade ? f.updateBtn : f.saveBtn}
           </button>
           {onCancel && (
             <button
@@ -479,7 +485,7 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
               onClick={onCancel}
               className="px-6 py-3 border border-[#2a2a2a] text-zinc-400 rounded-lg hover:border-[#3a3a3a] hover:text-white transition-colors text-sm"
             >
-              Cancel
+              {f.cancel}
             </button>
           )}
         </div>
