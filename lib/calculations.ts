@@ -95,7 +95,7 @@ export function getEquityCurve(trades: Trade[]) {
   const days = Array.from(dailyMap.entries()).sort((a, b) => (a[0] > b[0] ? 1 : -1))
   let cumulative = 0
 
-  return days.map(([date, pnl]) => {
+  const points = days.map(([date, pnl]) => {
     cumulative += pnl
     const d = new Date(date + 'T12:00:00')
     return {
@@ -105,6 +105,13 @@ export function getEquityCurve(trades: Trade[]) {
       cumulative,
     }
   })
+
+  // Always prepend a $0 start point so there's always a line (not just a dot)
+  if (points.length > 0) {
+    points.unshift({ date: 'Start', fullDate: '', dailyPnL: 0, cumulative: 0 })
+  }
+
+  return points
 }
 
 export function getSymbolStats(trades: Trade[]) {
