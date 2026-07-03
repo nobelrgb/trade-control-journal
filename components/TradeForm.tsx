@@ -177,12 +177,26 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
               />
             </div>
             <div>
-              <label className={labelClass}>Time *</label>
+              <label className={labelClass}>Time * (24h)</label>
               <input
-                type="time"
+                type="text"
                 required
+                placeholder="16:30"
+                maxLength={5}
                 value={form.time}
-                onChange={e => set('time', e.target.value)}
+                onChange={e => {
+                  let val = e.target.value.replace(/[^0-9:]/g, '')
+                  if (val.length === 2 && !val.includes(':') && form.time.length === 1) {
+                    val = val + ':'
+                  }
+                  set('time', val)
+                }}
+                onBlur={e => {
+                  const val = e.target.value
+                  if (val && !val.includes(':') && val.length <= 2) {
+                    set('time', val.padStart(2, '0') + ':00')
+                  }
+                }}
                 className={inputClass}
               />
             </div>
