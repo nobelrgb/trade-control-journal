@@ -443,7 +443,7 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
         {/* Section: P&L and Risk */}
         <div className="bg-[#111111] border border-[#1e1e1e] rounded-xl p-5">
           <h3 className="text-amber-400 text-xs font-semibold uppercase tracking-widest mb-4">{f.pnlRisk}</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>{f.pnl}</label>
               <div className="relative">
@@ -476,30 +476,6 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
                   className={inputClass + ' pl-7'}
                 />
               </div>
-            </div>
-            <div>
-              <label className={labelClass}>{f.plannedRR}</label>
-              <input
-                type="number"
-                step="0.01"
-                placeholder="2.00"
-                value={form.plannedRR}
-                onChange={e => set('plannedRR', e.target.value)}
-                className={inputClass}
-              />
-              <p className="text-zinc-600 text-[10px] mt-1">{f.plannedRRHint}</p>
-            </div>
-            <div>
-              <label className={labelClass}>{f.actualRR}</label>
-              <input
-                type="number"
-                step="0.01"
-                placeholder="Auto-calculated"
-                value={form.actualRR}
-                onChange={e => set('actualRR', e.target.value)}
-                className={inputClass}
-              />
-              <p className="text-zinc-600 text-[10px] mt-1">{f.actualRRHint}</p>
             </div>
           </div>
 
