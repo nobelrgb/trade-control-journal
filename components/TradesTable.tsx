@@ -262,7 +262,9 @@ export default function TradesTable({ trades, onEdit, onDelete }: TradesTablePro
                       </span>
                     </td>
                     <td className="px-4 py-3 text-zinc-400 text-xs">{fmt(trade.risk)}</td>
-                    <td className="px-4 py-3 text-zinc-400 text-xs">{trade.plannedRR.toFixed(1)}R</td>
+                    <td className="px-4 py-3 text-zinc-400 text-xs">
+                      {trade.plannedRR === 0 ? '—' : `${trade.plannedRR.toFixed(2)}R`}
+                    </td>
                     <td className="px-4 py-3">
                       <span className={`text-xs font-medium ${trade.actualRR >= 1 ? 'text-emerald-400' : trade.actualRR < 0 ? 'text-red-400' : 'text-zinc-400'}`}>
                         {trade.actualRR >= 0 ? '+' : ''}{trade.actualRR.toFixed(2)}R

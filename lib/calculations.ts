@@ -1,5 +1,50 @@
 import { Trade } from './types'
 
+// ── Price-based R-Multiple utilities ─────────────────────────────────────────
+
+export function calcInitialRisk(
+  entry: number | undefined,
+  sl: number | undefined,
+  type: 'Long' | 'Short'
+): number | null {
+  if (entry == null || sl == null || entry === sl) return null
+  const risk = type === 'Long' ? entry - sl : sl - entry
+  return risk > 0 ? risk : null
+}
+
+export function calcPlannedRR(
+  entry: number | undefined,
+  sl: number | undefined,
+  tp: number | undefined,
+  type: 'Long' | 'Short'
+): number | null {
+  if (tp == null) return null
+  const risk = calcInitialRisk(entry, sl, type)
+  if (!risk) return null
+  const reward = type === 'Long' ? tp - (entry ?? 0) : (entry ?? 0) - tp
+  return reward > 0 ? reward / risk : null
+}
+
+export function calcRealizedR(
+  entry: number | undefined,
+  sl: number | undefined,
+  exit: number | undefined,
+  type: 'Long' | 'Short'
+): number | null {
+  if (exit == null) return null
+  const risk = calcInitialRisk(entry, sl, type)
+  if (!risk) return null
+  const move = type === 'Long' ? exit - (entry ?? 0) : (entry ?? 0) - exit
+  return move / risk
+}
+
+export function formatR(r: number | null | undefined, fallback = '—'): string {
+  if (r == null) return fallback
+  return `${r > 0 ? '+' : ''}${r.toFixed(2)}R`
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function calculateStats(trades: Trade[]) {
   if (trades.length === 0) return null
 

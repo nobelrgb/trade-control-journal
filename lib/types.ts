@@ -15,6 +15,10 @@ export interface Trade {
   notes: string
   screenshot?: string
   createdAt: string
+  entryPrice?: number
+  stopLossPrice?: number
+  takeProfitPrice?: number
+  exitPrice?: number
 }
 
 export interface MonthlyGoal {

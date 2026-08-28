@@ -22,6 +22,10 @@ function toDb(trade: Trade, userId: string) {
     notes: trade.notes,
     screenshot: trade.screenshot || null,
     created_at: trade.createdAt,
+    entry_price: trade.entryPrice ?? null,
+    stop_loss_price: trade.stopLossPrice ?? null,
+    take_profit_price: trade.takeProfitPrice ?? null,
+    exit_price: trade.exitPrice ?? null,
   }
 }
 
@@ -43,6 +47,10 @@ function fromDb(row: Record<string, unknown>): Trade {
     notes: (row.notes as string) || '',
     screenshot: (row.screenshot as string) || undefined,
     createdAt: (row.created_at as string) || '',
+    entryPrice: row.entry_price != null ? Number(row.entry_price) : undefined,
+    stopLossPrice: row.stop_loss_price != null ? Number(row.stop_loss_price) : undefined,
+    takeProfitPrice: row.take_profit_price != null ? Number(row.take_profit_price) : undefined,
+    exitPrice: row.exit_price != null ? Number(row.exit_price) : undefined,
   }
 }
 

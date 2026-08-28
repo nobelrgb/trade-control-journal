@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Trade } from '@/lib/types'
+import { calcInitialRisk, calcPlannedRR, calcRealizedR, formatR } from '@/lib/calculations'
 import { useLanguage } from '@/components/LanguageContext'
 import { Upload, X, ChevronDown } from 'lucide-react'
 
@@ -30,6 +31,10 @@ const defaultForm = {
   touchedAfterEntry: false,
   notes: '',
   screenshot: '',
+  entryPrice: '',
+  stopLossPrice: '',
+  takeProfitPrice: '',
+  exitPrice: '',
 }
 
 interface ToggleProps {
@@ -83,7 +88,7 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
         const saved = localStorage.getItem(DRAFT_KEY)
         if (saved) {
           const draft = JSON.parse(saved)
-          setForm(draft)
+          setForm({ ...defaultForm, ...draft })
           setSymbolSearch(draft.symbol || '')
           if (draft.screenshot) setPreviewImg(draft.screenshot)
         }
@@ -114,6 +119,10 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
         touchedAfterEntry: editingTrade.touchedAfterEntry,
         notes: editingTrade.notes,
         screenshot: editingTrade.screenshot || '',
+        entryPrice: editingTrade.entryPrice != null ? String(editingTrade.entryPrice) : '',
+        stopLossPrice: editingTrade.stopLossPrice != null ? String(editingTrade.stopLossPrice) : '',
+        takeProfitPrice: editingTrade.takeProfitPrice != null ? String(editingTrade.takeProfitPrice) : '',
+        exitPrice: editingTrade.exitPrice != null ? String(editingTrade.exitPrice) : '',
       })
       setSymbolSearch(editingTrade.symbol)
       setPreviewImg(editingTrade.screenshot || '')
@@ -145,6 +154,8 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
   }
 
   const autoCalcRR = () => {
+    // Skip dollar-based calc if exit price already drives the value
+    if (form.exitPrice && !isNaN(parseFloat(form.exitPrice))) return
     const pnlVal = parseFloat(form.pnl)
     const riskVal = parseFloat(form.risk)
     if (!isNaN(pnlVal) && !isNaN(riskVal) && riskVal !== 0) {
@@ -152,9 +163,52 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
     }
   }
 
+  // ── Live price-based computations (reactive, no useEffect needed) ────────────
+  const liveEntry = parseFloat(form.entryPrice)
+  const liveSL = parseFloat(form.stopLossPrice)
+  const liveTP = parseFloat(form.takeProfitPrice)
+  const liveExit = parseFloat(form.exitPrice)
+  const hasPriceBase = !isNaN(liveEntry) && !isNaN(liveSL)
+  const liveInitialRisk = hasPriceBase ? calcInitialRisk(liveEntry, liveSL, form.type) : null
+  const livePlannedRR = hasPriceBase && !isNaN(liveTP)
+    ? calcPlannedRR(liveEntry, liveSL, liveTP, form.type)
+    : null
+  const liveRealizedR = hasPriceBase && !isNaN(liveExit)
+    ? calcRealizedR(liveEntry, liveSL, liveExit, form.type)
+    : null
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.symbol || !form.date || !form.pnl || !form.risk) return
+
+    const ep = parseFloat(form.entryPrice)
+    const sl = parseFloat(form.stopLossPrice)
+    const tp = parseFloat(form.takeProfitPrice)
+    const ex = parseFloat(form.exitPrice)
+    const hasPriceData = !isNaN(ep) && !isNaN(sl)
+
+    let finalPlannedRR = parseFloat(form.plannedRR) || 0
+    let finalActualRR = parseFloat(form.actualRR) || 0
+
+    if (hasPriceData) {
+      if (!isNaN(tp)) {
+        const pricePlanned = calcPlannedRR(ep, sl, tp, form.type)
+        if (pricePlanned !== null) finalPlannedRR = pricePlanned
+      }
+      if (!isNaN(ex)) {
+        const priceActual = calcRealizedR(ep, sl, ex, form.type)
+        if (priceActual !== null) finalActualRR = priceActual
+      }
+    }
+
+    // Dollar-based fallback if actual RR is still 0
+    if (finalActualRR === 0) {
+      const pnlVal = parseFloat(form.pnl)
+      const riskVal = parseFloat(form.risk)
+      if (!isNaN(pnlVal) && !isNaN(riskVal) && riskVal !== 0) {
+        finalActualRR = pnlVal / riskVal
+      }
+    }
 
     onSubmit({
       date: form.date,
@@ -163,14 +217,18 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
       type: form.type,
       pnl: parseFloat(form.pnl),
       risk: parseFloat(form.risk),
-      plannedRR: parseFloat(form.plannedRR) || 0,
-      actualRR: parseFloat(form.actualRR) || 0,
+      plannedRR: finalPlannedRR,
+      actualRR: finalActualRR,
       status: form.status,
       entryReason: form.entryReason,
       followedRules: form.followedRules,
       touchedAfterEntry: form.touchedAfterEntry,
       notes: form.notes,
       screenshot: form.screenshot || undefined,
+      entryPrice: !isNaN(ep) ? ep : undefined,
+      stopLossPrice: !isNaN(sl) ? sl : undefined,
+      takeProfitPrice: !isNaN(tp) ? tp : undefined,
+      exitPrice: !isNaN(ex) ? ex : undefined,
     })
 
     if (!editingTrade) {
@@ -195,7 +253,7 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Section: Basics */}
+        {/* Section: Trade Details */}
         <div className="bg-[#111111] border border-[#1e1e1e] rounded-xl p-5">
           <h3 className="text-amber-400 text-xs font-semibold uppercase tracking-widest mb-4">{f.tradeDetails}</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -293,6 +351,95 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
           </div>
         </div>
 
+        {/* Section: Price Levels */}
+        <div className="bg-[#111111] border border-[#1e1e1e] rounded-xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-amber-400 text-xs font-semibold uppercase tracking-widest">{f.priceLevels}</h3>
+            <span className="text-zinc-600 text-[10px]">{f.pricesOptional}</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <label className={labelClass}>{f.entryPrice}</label>
+              <input
+                type="number"
+                step="any"
+                placeholder="1800.00"
+                value={form.entryPrice}
+                onChange={e => set('entryPrice', e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>{f.stopLoss}</label>
+              <input
+                type="number"
+                step="any"
+                placeholder="1790.00"
+                value={form.stopLossPrice}
+                onChange={e => set('stopLossPrice', e.target.value)}
+                className={inputClass}
+              />
+              {hasPriceBase && liveInitialRisk === null && (
+                <p className="text-red-400 text-[10px] mt-1">
+                  {form.type === 'Long' ? f.slWarnLong : f.slWarnShort}
+                </p>
+              )}
+            </div>
+            <div>
+              <label className={labelClass}>{f.takeProfit} <span className="text-zinc-600 normal-case tracking-normal font-normal">(opt)</span></label>
+              <input
+                type="number"
+                step="any"
+                placeholder="1830.00"
+                value={form.takeProfitPrice}
+                onChange={e => set('takeProfitPrice', e.target.value)}
+                className={inputClass}
+              />
+              {hasPriceBase && liveInitialRisk !== null && !isNaN(liveTP) && livePlannedRR === null && (
+                <p className="text-red-400 text-[10px] mt-1">
+                  {form.type === 'Long' ? f.tpWarnLong : f.tpWarnShort}
+                </p>
+              )}
+            </div>
+            <div>
+              <label className={labelClass}>{f.exitPrice} <span className="text-zinc-600 normal-case tracking-normal font-normal">(opt)</span></label>
+              <input
+                type="number"
+                step="any"
+                placeholder="1825.00"
+                value={form.exitPrice}
+                onChange={e => set('exitPrice', e.target.value)}
+                className={inputClass}
+              />
+            </div>
+          </div>
+
+          {hasPriceBase && liveInitialRisk !== null && (
+            <div className="mt-3 pt-3 border-t border-[#1e1e1e] flex flex-wrap gap-6">
+              <div>
+                <p className="text-zinc-600 text-[10px] uppercase tracking-wide mb-0.5">Initial Risk</p>
+                <p className="text-zinc-300 text-sm font-medium">{liveInitialRisk.toFixed(4)} pts</p>
+              </div>
+              <div>
+                <p className="text-zinc-600 text-[10px] uppercase tracking-wide mb-0.5">{f.livePlanned}</p>
+                <p className={`text-sm font-bold ${livePlannedRR !== null ? 'text-amber-400' : 'text-zinc-600'}`}>
+                  {livePlannedRR !== null ? `${livePlannedRR.toFixed(2)}R` : '—'}
+                </p>
+              </div>
+              <div>
+                <p className="text-zinc-600 text-[10px] uppercase tracking-wide mb-0.5">{f.liveRealized}</p>
+                {liveRealizedR !== null ? (
+                  <p className={`text-sm font-bold ${liveRealizedR >= 1 ? 'text-emerald-400' : liveRealizedR >= 0 ? 'text-amber-400' : 'text-red-400'}`}>
+                    {formatR(liveRealizedR)}
+                  </p>
+                ) : (
+                  <p className="text-zinc-600 text-sm">— <span className="text-[10px]">({f.openTrade})</span></p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Section: P&L and Risk */}
         <div className="bg-[#111111] border border-[#1e1e1e] rounded-xl p-5">
           <h3 className="text-amber-400 text-xs font-semibold uppercase tracking-widest mb-4">{f.pnlRisk}</h3>
@@ -334,12 +481,13 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
               <label className={labelClass}>{f.plannedRR}</label>
               <input
                 type="number"
-                step="0.1"
-                placeholder="2.0"
+                step="0.01"
+                placeholder="2.00"
                 value={form.plannedRR}
                 onChange={e => set('plannedRR', e.target.value)}
                 className={inputClass}
               />
+              <p className="text-zinc-600 text-[10px] mt-1">{f.plannedRRHint}</p>
             </div>
             <div>
               <label className={labelClass}>{f.actualRR}</label>
