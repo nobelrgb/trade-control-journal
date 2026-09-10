@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { Trade, MonthlyGoal } from './types'
+import { deriveTradeOutcome } from './calculations'
 
 // ── Mapping ──────────────────────────────────────────────────────────────────
 
@@ -40,7 +41,8 @@ function fromDb(row: Record<string, unknown>): Trade {
     risk: Number(row.risk),
     plannedRR: Number(row.planned_rr),
     actualRR: Number(row.actual_rr),
-    status: row.status as Trade['status'],
+    // Always derive status from P&L — ignores any stale value stored in the DB
+    status: deriveTradeOutcome(Number(row.pnl)),
     entryReason: (row.entry_reason as string) || '',
     followedRules: Boolean(row.followed_rules),
     touchedAfterEntry: Boolean(row.touched_after_entry),

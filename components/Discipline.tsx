@@ -158,7 +158,7 @@ export default function Discipline({ trades }: DisciplineProps) {
             <div className="flex justify-between py-2 border-b border-[#1e1e1e]">
               <span className="text-zinc-400 text-sm">{d.losses}</span>
               <span className="text-red-400 font-semibold text-sm">
-                {stats.followedCount - stats.followedWins - (trades.filter(tr => tr.followedRules && tr.status === 'Break Even').length)}
+                {stats.followedLosses}
               </span>
             </div>
             <div className="flex justify-between py-2">
@@ -197,7 +197,7 @@ export default function Discipline({ trades }: DisciplineProps) {
             </div>
             <div className="flex justify-between py-2 border-b border-[#1e1e1e]">
               <span className="text-zinc-400 text-sm">{d.wins}</span>
-              <span className="text-emerald-400 font-semibold text-sm">{trades.filter(tr => !tr.followedRules && tr.status === 'Win').length}</span>
+              <span className="text-emerald-400 font-semibold text-sm">{stats.notFollowedWins}</span>
             </div>
             <div className="flex justify-between py-2 border-b border-[#1e1e1e]">
               <span className="text-zinc-400 text-sm">{d.losses}</span>

@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { Trade } from '@/lib/types'
+import { deriveTradeOutcome } from '@/lib/calculations'
 import { useLanguage } from '@/components/LanguageContext'
 import { Search, Edit2, Trash2, Image, ChevronUp, ChevronDown, X } from 'lucide-react'
 
@@ -271,9 +272,14 @@ export default function TradesTable({ trades, onEdit, onDelete }: TradesTablePro
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded-md text-[11px] font-medium border ${statusBadge(trade.status)}`}>
-                        {trade.status}
-                      </span>
+                      {(() => {
+                        const s = deriveTradeOutcome(trade.pnl)
+                        return (
+                          <span className={`px-2 py-1 rounded-md text-[11px] font-medium border ${statusBadge(s)}`}>
+                            {s}
+                          </span>
+                        )
+                      })()}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`text-[11px] font-medium ${trade.followedRules ? 'text-emerald-400' : 'text-red-400'}`}>

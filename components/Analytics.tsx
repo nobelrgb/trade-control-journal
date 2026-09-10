@@ -7,6 +7,7 @@ import {
   getLongShortStats,
   getBestAndWorstDays,
   getEquityCurve,
+  OUTCOME_EPSILON,
 } from '@/lib/calculations'
 import { useLanguage } from '@/components/LanguageContext'
 import PerformanceChart from './PerformanceChart'
@@ -231,8 +232,9 @@ export default function Analytics({ trades }: AnalyticsProps) {
             { label: a.brokeRules, trades: rulesNotFollowed, color: 'red', icon: '✗' },
           ].map(({ label, trades: tr, color, icon }) => {
             const pnl = tr.reduce((s, x) => s + x.pnl, 0)
-            const w = tr.filter(x => x.status === 'Win').length
-            const wr = tr.length > 0 ? (w / tr.length) * 100 : 0
+            const w = tr.filter(x => x.pnl > OUTCOME_EPSILON).length
+            const l = tr.filter(x => x.pnl < -OUTCOME_EPSILON).length
+            const wr = (w + l) > 0 ? (w / (w + l)) * 100 : 0
             return (
               <div key={label} className={`mb-4 last:mb-0 p-4 rounded-lg bg-${color}-400/5 border border-${color}-400/10`}>
                 <div className="flex items-center justify-between mb-2">

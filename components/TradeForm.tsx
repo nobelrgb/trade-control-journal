@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Trade } from '@/lib/types'
-import { calcInitialRisk, calcPlannedRR, calcRealizedR, formatR } from '@/lib/calculations'
+import { calcInitialRisk, calcPlannedRR, calcRealizedR, formatR, deriveTradeOutcome, calculateActualR } from '@/lib/calculations'
 import { useLanguage } from '@/components/LanguageContext'
 import { Upload, X, ChevronDown } from 'lucide-react'
 
@@ -156,12 +156,16 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
   const autoCalcRR = () => {
     // Skip dollar-based calc if exit price already drives the value
     if (form.exitPrice && !isNaN(parseFloat(form.exitPrice))) return
-    const pnlVal = parseFloat(form.pnl)
+    const pnlVal  = parseFloat(form.pnl)
     const riskVal = parseFloat(form.risk)
-    if (!isNaN(pnlVal) && !isNaN(riskVal) && riskVal !== 0) {
-      set('actualRR', (pnlVal / riskVal).toFixed(2))
+    if (isFinite(pnlVal) && riskVal > 0) {
+      set('actualRR', calculateActualR(pnlVal, riskVal).toFixed(2))
     }
   }
+
+  // ── Live outcome derived from P&L (read-only; never manually chosen) ─────────
+  const pnlNum      = parseFloat(form.pnl)
+  const derivedStatus = isFinite(pnlNum) ? deriveTradeOutcome(pnlNum) : null
 
   // ── Live price-based computations (reactive, no useEffect needed) ────────────
   const liveEntry = parseFloat(form.entryPrice)
@@ -181,6 +185,15 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
     e.preventDefault()
     if (!form.symbol || !form.date || !form.pnl || !form.risk) return
 
+    const finalPnl  = parseFloat(form.pnl)
+    const finalRisk = parseFloat(form.risk)
+
+    // Hard validation — reject NaN / Infinity and non-positive risk
+    if (!isFinite(finalPnl) || !isFinite(finalRisk) || finalRisk <= 0) return
+
+    // Status is always derived from P&L — never trusted from form state
+    const finalStatus = deriveTradeOutcome(finalPnl)
+
     const ep = parseFloat(form.entryPrice)
     const sl = parseFloat(form.stopLossPrice)
     const tp = parseFloat(form.takeProfitPrice)
@@ -188,7 +201,7 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
     const hasPriceData = !isNaN(ep) && !isNaN(sl)
 
     let finalPlannedRR = parseFloat(form.plannedRR) || 0
-    let finalActualRR = parseFloat(form.actualRR) || 0
+    let finalActualRR  = 0
 
     if (hasPriceData) {
       if (!isNaN(tp)) {
@@ -197,17 +210,19 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
       }
       if (!isNaN(ex)) {
         const priceActual = calcRealizedR(ep, sl, ex, form.type)
-        if (priceActual !== null) finalActualRR = priceActual
+        if (priceActual !== null) {
+          finalActualRR = priceActual
+        } else {
+          // price-based failed (invalid geometry) → dollar fallback
+          finalActualRR = calculateActualR(finalPnl, finalRisk)
+        }
+      } else {
+        // No exit price → dollar fallback
+        finalActualRR = calculateActualR(finalPnl, finalRisk)
       }
-    }
-
-    // Dollar-based fallback if actual RR is still 0
-    if (finalActualRR === 0) {
-      const pnlVal = parseFloat(form.pnl)
-      const riskVal = parseFloat(form.risk)
-      if (!isNaN(pnlVal) && !isNaN(riskVal) && riskVal !== 0) {
-        finalActualRR = pnlVal / riskVal
-      }
+    } else {
+      // No price data at all → dollar fallback
+      finalActualRR = calculateActualR(finalPnl, finalRisk)
     }
 
     onSubmit({
@@ -215,11 +230,11 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
       time: form.time,
       symbol: form.symbol,
       type: form.type,
-      pnl: parseFloat(form.pnl),
-      risk: parseFloat(form.risk),
+      pnl: finalPnl,
+      risk: finalRisk,
       plannedRR: finalPlannedRR,
       actualRR: finalActualRR,
-      status: form.status,
+      status: finalStatus,
       entryReason: form.entryReason,
       followedRules: form.followedRules,
       touchedAfterEntry: form.touchedAfterEntry,
@@ -483,24 +498,23 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
             <label className={labelClass}>{f.outcome}</label>
             <div className="flex gap-2">
               {(['Win', 'Loss', 'Break Even'] as const).map(s => (
-                <button
+                <div
                   key={s}
-                  type="button"
-                  onClick={() => set('status', s)}
-                  className={`flex-1 py-2.5 rounded-lg text-sm font-medium border transition-all ${
-                    form.status === s
+                  className={`flex-1 py-2.5 rounded-lg text-sm font-medium border text-center select-none ${
+                    derivedStatus === s
                       ? s === 'Win'
                         ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
                         : s === 'Loss'
                         ? 'bg-red-500/20 text-red-400 border-red-500/40'
                         : 'bg-zinc-500/20 text-zinc-300 border-zinc-500/40'
-                      : 'border-[#2a2a2a] text-zinc-500 hover:border-[#3a3a3a] hover:text-zinc-300'
+                      : 'border-[#1e1e1e] text-zinc-700'
                   }`}
                 >
                   {statusLabels[s]}
-                </button>
+                </div>
               ))}
             </div>
+            <p className="text-zinc-600 text-[10px] mt-1.5">{f.outcomeAutoHint}</p>
           </div>
         </div>
 
