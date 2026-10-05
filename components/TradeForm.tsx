@@ -80,6 +80,7 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
   const [symbolSearch, setSymbolSearch] = useState('')
   const [showSymbolDropdown, setShowSymbolDropdown] = useState(false)
   const [previewImg, setPreviewImg] = useState<string>('')
+  const [formError, setFormError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -183,13 +184,19 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.symbol || !form.date || !form.pnl || !form.risk) return
+    setFormError(null)
+
+    if (!form.symbol) return setFormError(f.errorMissingSymbol)
+    if (!form.date) return setFormError(f.errorMissingDate)
+    if (!form.pnl) return setFormError(f.errorMissingPnl)
+    if (!form.risk) return setFormError(f.errorMissingRisk)
 
     const finalPnl  = parseFloat(form.pnl)
     const finalRisk = parseFloat(form.risk)
 
     // Hard validation — reject NaN / Infinity and non-positive risk
-    if (!isFinite(finalPnl) || !isFinite(finalRisk) || finalRisk <= 0) return
+    if (!isFinite(finalPnl)) return setFormError(f.errorInvalidPnl)
+    if (!isFinite(finalRisk) || finalRisk <= 0) return setFormError(f.errorInvalidRisk)
 
     // Status is always derived from P&L — never trusted from form state
     const finalStatus = deriveTradeOutcome(finalPnl)
@@ -610,6 +617,11 @@ export default function TradeForm({ onSubmit, onCancel, editingTrade }: TradeFor
         </div>
 
         {/* Submit */}
+        {formError && (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 text-red-400 text-sm font-medium">
+            {formError}
+          </div>
+        )}
         <div className="flex gap-3">
           <button
             type="submit"
