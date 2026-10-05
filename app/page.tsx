@@ -106,6 +106,7 @@ function AppInner() {
         showToast('Failed to update trade', 'error')
       }
       setEditingTrade(null)
+      setActiveView('trades')
     } else {
       const newTrade: Trade = {
         ...tradeData,
@@ -119,8 +120,8 @@ function AppInner() {
       } catch {
         showToast('Failed to save trade', 'error')
       }
+      setActiveView('dashboard')
     }
-    setActiveView('trades')
   }
 
   const handleEdit = (trade: Trade) => {
