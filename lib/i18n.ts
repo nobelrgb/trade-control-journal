@@ -125,6 +125,15 @@ const en = {
     colRules: 'Rules',
     colActions: 'Actions',
     confirm: 'Confirm',
+    viewList: 'List',
+    viewCalendar: 'Calendar',
+  },
+  calendar: {
+    today: 'Today',
+    tradesCount: (n: number) => `${n} trade${n === 1 ? '' : 's'}`,
+    winRateShort: 'WR',
+    noTradesDay: 'No trades on this day.',
+    confirm: 'Confirm',
   },
   analytics: {
     title: 'Analytics',
@@ -382,6 +391,15 @@ const he: typeof en = {
     colStatus: 'תוצאה',
     colRules: 'כללים',
     colActions: 'פעולות',
+    confirm: 'אישור',
+    viewList: 'רשימה',
+    viewCalendar: 'לוח שנה',
+  },
+  calendar: {
+    today: 'היום',
+    tradesCount: (n: number) => `${n} עסק${n === 1 ? 'ה' : 'אות'}`,
+    winRateShort: 'אחוז הצלחה',
+    noTradesDay: 'אין עסקאות ביום זה.',
     confirm: 'אישור',
   },
   analytics: {

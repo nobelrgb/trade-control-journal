@@ -4,7 +4,8 @@ import { useState, useMemo } from 'react'
 import { Trade } from '@/lib/types'
 import { deriveTradeOutcome } from '@/lib/calculations'
 import { useLanguage } from '@/components/LanguageContext'
-import { Search, Edit2, Trash2, Image, ChevronUp, ChevronDown, X } from 'lucide-react'
+import TradeCalendar from './TradeCalendar'
+import { Search, Edit2, Trash2, Image, ChevronUp, ChevronDown, X, List, Calendar } from 'lucide-react'
 
 interface TradesTableProps {
   trades: Trade[]
@@ -38,6 +39,7 @@ export default function TradesTable({ trades, onEdit, onDelete }: TradesTablePro
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [screenshotModal, setScreenshotModal] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
 
   const today = new Date().toISOString().slice(0, 10)
   const weekStart = (() => {
@@ -145,10 +147,32 @@ export default function TradesTable({ trades, onEdit, onDelete }: TradesTablePro
             )}
           </p>
         </div>
-        <div className="flex gap-2 text-xs">
-          <span className="text-emerald-400 font-medium">{wins}W</span>
-          <span className="text-zinc-600">/</span>
-          <span className="text-red-400 font-medium">{losses}L</span>
+        <div className="flex items-center gap-3">
+          <div className="flex gap-2 text-xs">
+            <span className="text-emerald-400 font-medium">{wins}W</span>
+            <span className="text-zinc-600">/</span>
+            <span className="text-red-400 font-medium">{losses}L</span>
+          </div>
+          <div className="flex items-center rounded-lg border border-[#2a2a2a] overflow-hidden">
+            <button
+              onClick={() => setViewMode('list')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
+                viewMode === 'list' ? 'bg-amber-400 text-black' : 'text-zinc-400 hover:text-white hover:bg-[#1a1a1a]'
+              }`}
+            >
+              <List size={13} />
+              {tb.viewList}
+            </button>
+            <button
+              onClick={() => setViewMode('calendar')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors border-l border-[#2a2a2a] ${
+                viewMode === 'calendar' ? 'bg-amber-400 text-black' : 'text-zinc-400 hover:text-white hover:bg-[#1a1a1a]'
+              }`}
+            >
+              <Calendar size={13} />
+              {tb.viewCalendar}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -207,8 +231,10 @@ export default function TradesTable({ trades, onEdit, onDelete }: TradesTablePro
         </div>
       </div>
 
-      {/* Table */}
-      {filtered.length === 0 ? (
+      {/* Table / Calendar */}
+      {viewMode === 'calendar' ? (
+        <TradeCalendar trades={filtered} onEdit={onEdit} onDelete={onDelete} />
+      ) : filtered.length === 0 ? (
         <div className="bg-[#111111] border border-[#1e1e1e] rounded-xl p-12 text-center">
           <p className="text-zinc-500 text-sm">{tb.noMatch}</p>
         </div>
