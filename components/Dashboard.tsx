@@ -81,18 +81,10 @@ export default function Dashboard({ trades, monthlyGoal, onGoalUpdate, onAddTrad
       {/* Primary Stats Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="col-span-2 bg-[#111111] border border-[#1e1e1e] rounded-xl p-5 hover:border-[#2a2a2a] transition-colors">
-          <p className="text-zinc-500 text-xs font-medium uppercase tracking-wider mb-2">{t.nav.totalPnL}</p>
-          <p className={`text-4xl font-black ${stats!.totalPnL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-            {fmt(stats!.totalPnL, true)}
+          <p className="text-zinc-500 text-xs font-medium uppercase tracking-wider mb-2">{d.thisMonth}</p>
+          <p className={`text-4xl font-black ${monthly >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            {fmt(monthly, true)}
           </p>
-          <div className="flex gap-4 mt-3">
-            <span className="text-zinc-500 text-xs">
-              <span className="text-emerald-500 font-medium">{stats!.wins}W</span>
-              {' / '}
-              <span className="text-red-500 font-medium">{stats!.losses}L</span>
-              {stats!.breakEvens > 0 && <span className="text-zinc-400 font-medium"> / {stats!.breakEvens}BE</span>}
-            </span>
-          </div>
         </div>
 
         <StatCard
@@ -111,7 +103,13 @@ export default function Dashboard({ trades, monthlyGoal, onGoalUpdate, onAddTrad
 
       {/* Secondary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <StatCard label={d.thisMonth} value={fmt(monthly, true)} accent={monthly >= 0 ? 'green' : 'red'} size="sm" />
+        <StatCard
+          label={t.nav.totalPnL}
+          value={fmt(stats!.totalPnL, true)}
+          sub={`${stats!.wins}W / ${stats!.losses}L${stats!.breakEvens > 0 ? ` / ${stats!.breakEvens}BE` : ''}`}
+          accent={stats!.totalPnL >= 0 ? 'green' : 'red'}
+          size="sm"
+        />
         <StatCard label={d.winRate} value={`${stats!.winRate.toFixed(1)}%`} accent={stats!.winRate >= 50 ? 'green' : 'red'} icon={<Percent size={14} />} size="sm" />
         <StatCard label={d.avgWin} value={fmt(stats!.avgWin)} accent="green" size="sm" />
         <StatCard label={d.avgLoss} value={fmt(stats!.avgLoss)} accent="red" size="sm" />
